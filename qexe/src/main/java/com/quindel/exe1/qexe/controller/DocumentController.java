@@ -16,18 +16,14 @@ public class DocumentController {
 	@Autowired
 	private DocumentService docService;
 	
-	@GetMapping("/getDoc")
-	public Document getDocument() {
-		return docService.getDocument();
+	@GetMapping("/getDoc/{docName}")
+	public Document getDocument(@PathVariable String docName) {
+		return docService.getDocument(docName);
 	}
 	
-	@PostMapping("/addLine/{docName}")
-	public void addLine(@PathVariable String docName, @RequestBody Document docInfo) {
-		
-		docInfo.getLines().forEach(newLine -> {
-			System.out.println("Adding new line: " + newLine);
-			docService.addLineToDocument(docName, newLine);
-		});
+	@PostMapping("/addLine")
+	public void addLine(@RequestBody Document docInfo) {
+		docService.addLineToDocument(docInfo.getDocName(), docInfo.getNewLine());
 	}
 	
 	@GetMapping("/getLine/{docName}/{numLine}")

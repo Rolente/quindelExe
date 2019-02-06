@@ -8,6 +8,7 @@ public class Document {
 	private String docName;
 	
 	private List<String> lines;
+	private String newLine = "";
 	
 	public Document() {
 		docName = "No Name";
@@ -42,5 +43,13 @@ public class Document {
 
 	public void setLines(List<String> lines) {
 		this.lines = lines;
+	}
+
+	public String getNewLine() {
+		return newLine;
+	}
+
+	public void setNewLine(String newLine) {
+		this.newLine = newLine;
 	}
 }

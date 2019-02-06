@@ -106,7 +106,7 @@ public class ElasticClient {
 	 * @return
 	 */
 	@SuppressWarnings("unchecked")
-	private Document retrieveDocument(String docName) {
+	public Document retrieveDocument(String docName) {
 		
 		Document doc = null;
 		

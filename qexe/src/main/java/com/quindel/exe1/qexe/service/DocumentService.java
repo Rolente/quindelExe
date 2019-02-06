@@ -17,11 +17,8 @@ public class DocumentService {
 		elasticClient = new ElasticClient();
 	}
 
-	public Document getDocument() {
-		
-		Document doc = new Document();
-		
-		return doc;
+	public Document getDocument(String docName) {
+		return elasticClient.retrieveDocument(docName);
 	}
 	
 	public synchronized void addLineToDocument(String docName, String lineText) {
