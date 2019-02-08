@@ -23,9 +23,8 @@ import com.quindel.exe1.qexe.model.Document;
 public class ElasticClient {
 	
 	static final String INDEX_QINDEL = "qindel_document";
+	static final String TYPE_QINDEL = "qindel_doc";
 
-	String lines = "";
-	
 	RestHighLevelClient client = new RestHighLevelClient(
 			RestClient.builder(
 					new HttpHost("localhost", 9200, "http"),
@@ -33,33 +32,10 @@ public class ElasticClient {
 					)
 			);
 	
-	public void addDocumentLine(String docName, String line) {
+	public void persistDocument(Document document) {
+		IndexRequest request = new IndexRequest(INDEX_QINDEL, TYPE_QINDEL, document.getDocName());	
 		
-		String indexPattern = INDEX_QINDEL;
-		
-		lines = "";
-		Document doc = retrieveDocument(docName);
-		
-		if(doc == null) {
-			doc = new Document();
-			doc.setDocName(docName);
-		}		
-		
-		IndexRequest request = new IndexRequest(indexPattern, "qindel_doc", docName);			
-			
-		doc.getLines().forEach(lineText -> {
-			
-			lines += "\"" + lineText + "\",";
-		});
-		
-		lines += "\"" + line + "\"";
-		
-		String bodyContent = "{" +
-			"\"lines\": [" +
-			lines +
-			"]}";
-		
-		request.source(bodyContent, XContentType.JSON);
+		request.source(document.linesToJson(), XContentType.JSON);
 		
 		try {
 			IndexResponse response = client.index(request, RequestOptions.DEFAULT);
@@ -73,31 +49,7 @@ public class ElasticClient {
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-		}
-	}
-	
-	public String getLine(String docName, int numLine) {
-		String line = "";
-		
-		Document doc = retrieveDocument(docName);
-		
-		if(doc != null && numLine > 0 && numLine <= doc.getLines().size()) {
-			line = doc.getLines().get(numLine - 1);
-		}
-		
-		return line;
-	}
-	
-	public int getNumLines(String docName) {
-		int count = 0;
-		
-		Document doc = retrieveDocument(docName);
-		
-		if(doc != null) {
-			count = doc.getLines().size();
-		}
-		
-		return count;
+		}		
 	}
 	
 	/**
@@ -112,7 +64,7 @@ public class ElasticClient {
 		
 		GetRequest request = new GetRequest(
 				INDEX_QINDEL,
-				"qindel_doc",
+				TYPE_QINDEL,
 				docName
 				);
 		
@@ -131,7 +83,7 @@ public class ElasticClient {
 					Object obj = source.get("lines");
 					
 					if(obj != null) {
-						doc.setLines(new ArrayList<String>((Collection<String>)obj));
+						doc.setAllLines(new ArrayList<String>((Collection<String>)obj));
 					}
 				}
 			}

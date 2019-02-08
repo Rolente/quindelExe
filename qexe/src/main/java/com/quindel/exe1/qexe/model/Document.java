@@ -3,30 +3,82 @@ package com.quindel.exe1.qexe.model;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+
+class DocumentLines{
+
+	private List<String> lines;
+	
+	public DocumentLines() {
+		lines = new ArrayList<String>();
+	}
+
+	public List<String> getLines() {
+		return lines;
+	}
+
+	public void setLines(List<String> lines) {
+		this.lines = lines;
+	}
+}
+
 public class Document {
 
-	private String docName;
+	private String docName = "Not set";
 	
-	private List<String> lines;
-	private String newLine = "";
+	private DocumentLines documentLines = new DocumentLines();
 	
-	public Document() {
-		docName = "No Name";
-		setLines(new ArrayList<String>());
-	}
+	public static final Gson GSON = new GsonBuilder().serializeSpecialFloatingPointValues().create();
 	
 	public String getLine(int numLine) {
 		
 		String line = null;
 		
-		if(numLine > 0 && numLine < lines.size())		
-			line = lines.get(numLine);		
+		if(numLine > 0 && numLine <= getDocumentLines().getLines().size())		
+			line = getDocumentLines().getLines().get(numLine - 1);		
 		
 		return line;
 	}
 	
-	public int getDocumentLinesCount() {
-		return lines.size();
+	public int getNumLines() {
+		return getDocumentLines().getLines().size();
+	}
+	
+	public void setAllLines(List<String> lines) {
+		getDocumentLines().setLines(lines);
+	}
+	
+	public String linesToJson() {
+		return GSON.toJson(getDocumentLines());
+	}
+	
+	public void addLine(String lineTxt) {
+		getDocumentLines().getLines().add(lineTxt);
+	}
+	
+	public boolean insertLine(int numLine, String lineTxt) {
+		if(numLine > 0)	{
+			getDocumentLines().getLines().add(numLine - 1, lineTxt);
+			return true;
+		}
+		return false;
+	}
+	
+	public boolean eraseLine(int numLine) {
+		if(numLine > 0 && numLine <= getDocumentLines().getLines().size())	{
+			getDocumentLines().getLines().remove(numLine - 1);
+			return true;
+		}
+		return false;
+	}
+	
+	public boolean modifyLine(int lineIdx, String lineTxt) {
+		if(eraseLine(lineIdx)) {
+			insertLine(lineIdx, lineTxt);
+			return true;
+		}
+		return false;
 	}
 	
 	public String getDocName() {
@@ -37,19 +89,7 @@ public class Document {
 		this.docName = docName;
 	}
 
-	public List<String> getLines() {
-		return lines;
-	}
-
-	public void setLines(List<String> lines) {
-		this.lines = lines;
-	}
-
-	public String getNewLine() {
-		return newLine;
-	}
-
-	public void setNewLine(String newLine) {
-		this.newLine = newLine;
+	public DocumentLines getDocumentLines() {
+		return documentLines;
 	}
 }

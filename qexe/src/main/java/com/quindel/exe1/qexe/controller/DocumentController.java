@@ -2,8 +2,8 @@ package com.quindel.exe1.qexe.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,23 +16,38 @@ public class DocumentController {
 	@Autowired
 	private DocumentService docService;
 	
-	@GetMapping("/getDoc/{docName}")
-	public Document getDocument(@PathVariable String docName) {
-		return docService.getDocument(docName);
+	@GetMapping("/getDocument")
+	public Document getDocument(@RequestBody CommandParams command) {
+		return docService.getDocument(command.getDocName());
 	}
 	
 	@PostMapping("/addLine")
-	public void addLine(@RequestBody Document docInfo) {
-		docService.addLineToDocument(docInfo.getDocName(), docInfo.getNewLine());
+	public void addLine(@RequestBody CommandParams command) {
+		docService.addLineToDocument(command.getDocName(), command.getLineTxt());
 	}
 	
-	@GetMapping("/getLine/{docName}/{numLine}")
-	public String getLine(@PathVariable String docName, @PathVariable int numLine) {
-		return "{\"line\": \"" + docService.getLine(docName, numLine) + "\"}";		
+	@PutMapping("/insertLine")
+	public void insertLine(@RequestBody CommandParams command) {
+		docService.insertLineInDocument(command.getDocName(), command.getLineTxt(), command.getLineIdx());
+	}
+
+	@PutMapping("/eraseLine")
+	public void eraseLine(@RequestBody CommandParams command) {
+		docService.eraseDocumentLine(command.getDocName(), command.getLineIdx());
 	}
 	
-	@GetMapping("/getNumLines/{docName}")
-	public String getNumLines(@PathVariable String docName) {
-		return "{\"linesCount\": \"" + docService.getNumLines(docName) + "\"}";	
+	@PutMapping("/modifyLine")
+	public void modifyLine(@RequestBody CommandParams command) {
+		docService.modifyDocumentLine(command.getDocName(), command.getLineTxt(), command.getLineIdx());
+	}
+	
+	@GetMapping("/getLine")
+	public String getLine(@RequestBody CommandParams command) {
+		return docService.getLine(command.getDocName(), command.getLineIdx());		
+	}
+	
+	@GetMapping("/getNumLines")
+	public int getNumLines(@RequestBody CommandParams command) {
+		return docService.getNumLines(command.getDocName());	
 	}
 }

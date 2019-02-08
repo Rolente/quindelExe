@@ -22,14 +22,50 @@ public class DocumentService {
 	}
 	
 	public synchronized void addLineToDocument(String docName, String lineText) {
-		elasticClient.addDocumentLine(docName, lineText);		
+		
+		Document doc = elasticClient.retrieveDocument(docName);
+		
+		if(doc == null) {
+			doc = new Document();
+			doc.setDocName(docName);
+		}		
+		
+		doc.addLine(lineText);
+
+		elasticClient.persistDocument(doc);
 	}
 	
-	public String getLine(String docName, int line) {
-		return elasticClient.getLine(docName, line);
+	public String getLine(String docName, int lineIdx) {
+		return elasticClient.retrieveDocument(docName)
+				.getLine(lineIdx);
 	}
 	
 	public int getNumLines(String docName) {
-		return elasticClient.getNumLines(docName);
+		return elasticClient.retrieveDocument(docName).getNumLines();
+	}
+	
+	public void eraseDocumentLine(String docName, int lineIdx) {
+		Document doc = elasticClient.retrieveDocument(docName);
+		
+		if(doc != null && doc.eraseLine(lineIdx)) {
+			elasticClient.persistDocument(doc);
+		}		
+	}
+	
+	public void modifyDocumentLine(String docName, String newText, int lineIdx) {
+		
+		Document doc = elasticClient.retrieveDocument(docName);
+		
+		if(doc != null && doc.modifyLine(lineIdx, newText)) {
+			elasticClient.persistDocument(doc);
+		}		
+	}
+	
+	public void insertLineInDocument(String docName, String newText, int lineIdx) {
+		Document doc = elasticClient.retrieveDocument(docName);
+		
+		if(doc != null && doc.insertLine(lineIdx, newText)) {
+			elasticClient.persistDocument(doc);
+		}		
 	}
 }
