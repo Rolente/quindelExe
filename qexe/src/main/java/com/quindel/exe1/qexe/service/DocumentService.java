@@ -44,7 +44,7 @@ public class DocumentService {
 		return elasticClient.retrieveDocument(docName).getNumLines();
 	}
 	
-	public void eraseDocumentLine(String docName, int lineIdx) {
+	public synchronized void eraseDocumentLine(String docName, int lineIdx) {
 		Document doc = elasticClient.retrieveDocument(docName);
 		
 		if(doc != null && doc.eraseLine(lineIdx)) {
@@ -52,7 +52,7 @@ public class DocumentService {
 		}		
 	}
 	
-	public void modifyDocumentLine(String docName, String newText, int lineIdx) {
+	public synchronized void modifyDocumentLine(String docName, String newText, int lineIdx) {
 		
 		Document doc = elasticClient.retrieveDocument(docName);
 		
@@ -61,7 +61,7 @@ public class DocumentService {
 		}		
 	}
 	
-	public void insertLineInDocument(String docName, String newText, int lineIdx) {
+	public synchronized void insertLineInDocument(String docName, String newText, int lineIdx) {
 		Document doc = elasticClient.retrieveDocument(docName);
 		
 		if(doc != null && doc.insertLine(lineIdx, newText)) {

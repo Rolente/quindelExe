@@ -14,7 +14,15 @@ curl -XPUT http://${HOST}:${PORT}/_template/qindel_document -H 'Content-Type: ap
 		"number_of_replicas": 0,
 		"refresh_interval": "1s",
 		"index.translog.durability": "request",
-    		"index.codec": "best_compression"
+    	"index.codec": "best_compression",
+		"analysis":{
+			"analyzer":{
+				"es_std":{
+					"type": "standard",
+					"stopwords": "_spanish_"
+				}
+			}			
+		} 
 	},
 
 	"mappings": {
@@ -22,7 +30,9 @@ curl -XPUT http://${HOST}:${PORT}/_template/qindel_document -H 'Content-Type: ap
 		"qindel_doc": {
 			"properties": {
 				"lines": {
- 					"type": "keyword", "index": true 
+ 					"type": "text", 
+					 "index": true,
+					 "analyzer": "es_std"
 				}
 			}
 		}
