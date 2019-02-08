@@ -1,6 +1,6 @@
-package com.quindel.exe1.qexe.controller;
+package com.quindel.exe1.qexe.model;
 
-public class CommandParams {
+public class Params {
 
 	private String docName = "";
 	private String lineTxt = "";
@@ -16,19 +16,19 @@ public class CommandParams {
 		this.line = line;
 	}
 	
-	String getDocName() {
+	public String getDocName() {
 		return docName;
 	}
 
-	void setDocName(String docName) {
+	public void setDocName(String docName) {
 		this.docName = docName;
 	}
 
-	String getLineTxt() {
+	public String getLineTxt() {
 		return lineTxt;
 	}
 
-	void setLineTxt(String lineTxt) {
+	public void setLineTxt(String lineTxt) {
 		this.lineTxt = lineTxt;
 	}
 

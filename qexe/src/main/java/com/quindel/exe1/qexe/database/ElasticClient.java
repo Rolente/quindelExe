@@ -22,8 +22,9 @@ import com.quindel.exe1.qexe.model.Document;
 
 public class ElasticClient {
 	
-	static final String INDEX_QINDEL = "qindel_document";
-	static final String TYPE_QINDEL = "qindel_doc";
+	static final String INDEX = "qindel_document";
+	static final String RESTORE_INDEX = "qindel_versioning";
+	static final String TYPE = "qindel_doc";
 
 	RestHighLevelClient client = new RestHighLevelClient(
 			RestClient.builder(
@@ -33,7 +34,7 @@ public class ElasticClient {
 			);
 	
 	public void persistDocument(Document document) {
-		IndexRequest request = new IndexRequest(INDEX_QINDEL, TYPE_QINDEL, document.getDocName());	
+		IndexRequest request = new IndexRequest(INDEX, TYPE, document.getDocName());	
 		
 		request.source(document.linesToJson(), XContentType.JSON);
 		
@@ -63,8 +64,8 @@ public class ElasticClient {
 		Document doc = null;
 		
 		GetRequest request = new GetRequest(
-				INDEX_QINDEL,
-				TYPE_QINDEL,
+				INDEX,
+				TYPE,
 				docName
 				);
 		
