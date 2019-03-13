@@ -23,65 +23,93 @@ public class DocumentService {
 		return ElasticClient.getInstance().retrieveDocument(docName);
 	}
 	
-	public void rollbaclModification(String docName) {
+	public String getLine(ChangeDocParams command) {
+		return ElasticClient.getInstance().retrieveDocument(command.getDocName())
+				.getLine(command.getLineIdx());
+	}
+	
+	public int getNumLines(ChangeDocParams command) {
+		
+		Document doc = getDocument(command.getDocName());
+		
+		if(doc != null)
+			return doc.linesCount();
+		else
+			return 0;
+	}
+	
+	public synchronized Document rollbaclModifications(String docName)
+	{
+		return rollbaclModifications(docName, 1, true);
+	}
+	
+	public Document rollbaclModifications(String docName, int numModifications, boolean persist) {
 		
 		Document doc = ElasticClient.getInstance().retrieveDocument(docName);
 		
-		if(doc != null) {
+		if(doc != null && numModifications > 0) {
 		
 			List<ChangeDocCommand>  changeCommands = ElasticClient.getInstance().retrieveDocumentChangesCommands(docName);
 			
-			if(changeCommands != null && changeCommands.size() > 0) {
+			if(changeCommands != null) {
 				
-				// TODO: foreach hasta numero maximo. Con y sin persistencia.
-				ChangeDocCommand command = changeCommands.get(0);
-				ChangeDocParams lastChgCmd = command.getParams();
-				
-				CHANGES_TYPES chdCmdIds = CHANGES_TYPES.values()[lastChgCmd.getCmdId()];
+				for(ChangeDocCommand command: changeCommands) {
+					
+					ChangeDocParams lastChgCmd = command.getParams();
+					
+					CHANGES_TYPES chdCmdIds = CHANGES_TYPES.values()[lastChgCmd.getCmdId()];
 
-				switch(chdCmdIds) {
-				
-					case ADD_LINE:
-									
-						int numLastLine = doc.linesCount();
-						lastChgCmd.setLineIdx(numLastLine);
-						
-						if(eraseDocumentLine(doc, numLastLine)){
-							ElasticClient.getInstance().eraseDocumentChange(command.getId());
-						}
-						
-						break;
-						
-					case MOD_LINE:
-						
-						if(modifyDocumentLine(doc, lastChgCmd.getLineIdx(), lastChgCmd.getLineTxt())) {
-							ElasticClient.getInstance().eraseDocumentChange(command.getId());
-						}
-						
-						break;
-						
-					case INS_LINE:
-						
-						if(eraseDocumentLine(doc, lastChgCmd.getLineIdx())){
-							ElasticClient.getInstance().eraseDocumentChange(command.getId());
-						}
-						
-						break;
-						
-					case DEL_LINE:
-						
-						if(insertLineInDocument(doc, lastChgCmd.getLineIdx(), lastChgCmd.getLineTxt())){
-							ElasticClient.getInstance().eraseDocumentChange(command.getId());
-						}
-						
-						break;
-						
-					default:
-						
+					switch(chdCmdIds) {
+					
+						case ADD_LINE:
+										
+							int numLastLine = doc.linesCount();
+							lastChgCmd.setLineIdx(numLastLine);
+							
+							if(eraseDocumentLine(doc, numLastLine, persist) && persist){
+								ElasticClient.getInstance().eraseDocumentChange(command.getId());
+							}
+							
+							break;
+							
+						case MOD_LINE:
+							
+							if(modifyDocumentLine(doc, lastChgCmd.getLineIdx(), lastChgCmd.getLineTxt(), persist) && persist) {
+								ElasticClient.getInstance().eraseDocumentChange(command.getId());
+							}
+							
+							break;
+							
+						case INS_LINE:
+							
+							if(eraseDocumentLine(doc, lastChgCmd.getLineIdx(), persist) && persist){
+								ElasticClient.getInstance().eraseDocumentChange(command.getId());
+							}
+							
+							break;
+							
+						case DEL_LINE:
+							
+							if(insertLineInDocument(doc, lastChgCmd.getLineIdx(), lastChgCmd.getLineTxt(), persist) && persist){
+								ElasticClient.getInstance().eraseDocumentChange(command.getId());
+							}
+							
+							break;
+							
+						default:
+							
+							break;
+					}
+					
+					numModifications--;
+					
+					if(numModifications <= 0)
 						break;
 				}
 			}
 		}
+		
+		return doc;
 	}
 	
 	
@@ -103,21 +131,19 @@ public class DocumentService {
 			ElasticClient.getInstance().persistDocument(doc);			
 	}
 	
-	public String getLine(ChangeDocParams command) {
-		return ElasticClient.getInstance().retrieveDocument(command.getDocName())
-				.getLine(command.getLineIdx());
-	}
-	
-	public int getNumLines(ChangeDocParams command) {
-		return ElasticClient.getInstance().retrieveDocument(command.getDocName()).linesCount();
-	}
-	
 	private synchronized boolean eraseDocumentLine(Document doc, int line) {
+		return eraseDocumentLine(doc, line, true);
+	}
+	
+	private synchronized boolean eraseDocumentLine(Document doc, int line, boolean persist) {
 		
 		boolean ret = false;
 		
 		if(doc != null && doc.eraseLine(line)) {
-			ElasticClient.getInstance().persistDocument(doc);
+			
+			if(persist)
+				ElasticClient.getInstance().persistDocument(doc);
+			
 			ret = true;
 		}		
 		
@@ -141,30 +167,32 @@ public class DocumentService {
 		
 		Document doc = ElasticClient.getInstance().retrieveDocument(command.getDocName());
 		
+		String newLineTxt = command.getLineTxt();
+		
 		command.setTimeStamp(new Date().getTime());		
 		command.setCmdId(DBConstants.CHANGES_TYPES.MOD_LINE.getId());
-		String oldLineValue = doc.getLine(command.getLineIdx());
+		command.setLineTxt(doc.getLine(command.getLineIdx()));
 		
 		if(ElasticClient.getInstance().persisteDocChange(changeCommandToJson(command)))
 		{
-			if(doc != null && doc.modifyLine(command.getLineIdx(), command.getLineTxt())) {
-				
-				command.setLineTxt(oldLineValue);
-			
-				ElasticClient.getInstance().persistDocument(doc);
-				ret = true;
-			}
+			ret = modifyDocumentLine(doc, command.getLineIdx(), newLineTxt);
 		}
 		
 		return ret;
 	}
 	
 	private synchronized boolean modifyDocumentLine(Document doc, int lineIdx, String lineTxt) {
+		return modifyDocumentLine(doc, lineIdx, lineTxt, true);
+	}
+	
+	private synchronized boolean modifyDocumentLine(Document doc, int lineIdx, String lineTxt, boolean persist) {
 		boolean ret = false;
 		
 		if(doc != null && doc.modifyLine(lineIdx, lineTxt)) {
 			
-			ElasticClient.getInstance().persistDocument(doc);
+			if(persist)
+				ElasticClient.getInstance().persistDocument(doc);
+			
 			ret = true;
 		}
 		
@@ -184,9 +212,16 @@ public class DocumentService {
 	}
 	
 	private synchronized boolean insertLineInDocument(Document doc, int lineIdx, String lineTxt) {
+		return insertLineInDocument(doc, lineIdx, lineTxt, true);
+	}
+	
+	private synchronized boolean insertLineInDocument(Document doc, int lineIdx, String lineTxt, boolean persist) {
 		boolean ret = false;
 		if(doc != null && doc.insertLine(lineIdx, lineTxt)) {
-			ElasticClient.getInstance().persistDocument(doc);
+			
+			if(persist)
+				ElasticClient.getInstance().persistDocument(doc);
+			
 			ret = true;
 		}
 		return ret;

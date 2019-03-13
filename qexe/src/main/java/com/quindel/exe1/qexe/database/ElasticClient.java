@@ -132,7 +132,7 @@ public class ElasticClient {
 				SearchHit[] searchHits = hits.getHits();	
 				
 				for(SearchHit hit: searchHits) {
-					changeDocCommands.add(new ChangeDocCommand(hit.getId(), DBConstants.GSON.fromJson(searchHits[0].getSourceAsString(), ChangeDocParams.class)));
+					changeDocCommands.add(new ChangeDocCommand(hit.getId(), DBConstants.GSON.fromJson(hit.getSourceAsString(), ChangeDocParams.class)));
 				}
 			}
 			

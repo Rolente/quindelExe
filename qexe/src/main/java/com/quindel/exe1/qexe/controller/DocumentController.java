@@ -28,10 +28,14 @@ public class DocumentController {
 		return docService.getDocument(command.getDocName());
 	}
 	
-	@PostMapping("/rollbackMod/{docName}")
+	@PostMapping("/rollbackDocMod/{docName}")
 	public Document rollbackMod(@PathVariable String docName) {
-		docService.rollbaclModification(docName);
-		return docService.getDocument(docName);
+		return docService.rollbaclModifications(docName);
+	}
+	
+	@GetMapping("/seeDocPrevVersion/{docName}/{numModifications}")
+	public Document seeDocPrevVersion(@PathVariable String docName, @PathVariable int numModifications) {
+		return docService.rollbaclModifications(docName, numModifications, false);
 	}
 	
 	@PutMapping("/insertLine")

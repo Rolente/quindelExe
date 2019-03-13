@@ -42,7 +42,7 @@ curl -XPUT http://${HOST}:${PORT}/_template/qindel_document -H 'Content-Type: ap
 curl -XDELETE http://${HOST}:${PORT}/_template/qindel_changes >/dev/null 2>&1
 curl -XPUT http://${HOST}:${PORT}/_template/qindel_changes -H 'Content-Type: application/json' -d '
 {
-	"index_patterns": "qindel__changes*", 
+	"index_patterns": "qindel_changes*", 
 	"order": 1,
  
 	"settings": {
