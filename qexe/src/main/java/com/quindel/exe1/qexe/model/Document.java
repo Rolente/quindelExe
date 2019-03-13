@@ -3,8 +3,7 @@ package com.quindel.exe1.qexe.model;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.quindel.exe1.qexe.database.DBConstants;
 
 class DocumentLines{
 
@@ -29,8 +28,6 @@ public class Document {
 	
 	private DocumentLines documentLines = new DocumentLines();
 	
-	public static final Gson GSON = new GsonBuilder().serializeSpecialFloatingPointValues().create();
-	
 	public String getLine(int numLine) {
 		
 		String line = null;
@@ -41,7 +38,7 @@ public class Document {
 		return line;
 	}
 	
-	public int getNumLines() {
+	public int linesCount() {
 		return getDocumentLines().getLines().size();
 	}
 	
@@ -50,7 +47,7 @@ public class Document {
 	}
 	
 	public String linesToJson() {
-		return GSON.toJson(getDocumentLines());
+		return DBConstants.GSON.toJson(getDocumentLines());
 	}
 	
 	public void addLine(String lineTxt) {

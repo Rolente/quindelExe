@@ -39,3 +39,43 @@ curl -XPUT http://${HOST}:${PORT}/_template/qindel_document -H 'Content-Type: ap
 	}
 }'
 
+curl -XDELETE http://${HOST}:${PORT}/_template/qindel_changes >/dev/null 2>&1
+curl -XPUT http://${HOST}:${PORT}/_template/qindel_changes -H 'Content-Type: application/json' -d '
+{
+	"index_patterns": "qindel__changes*", 
+	"order": 1,
+ 
+	"settings": {
+		"number_of_shards": 1,
+		"number_of_replicas": 0,
+		"refresh_interval": "1s",
+		"index.translog.durability": "request",
+    	"index.codec": "best_compression"
+	},
+
+	"mappings": {
+
+		"qindel_changes": {
+			"properties": {
+				"timeStamp": {
+					"type": "date",
+					"format": "epoch_millis"
+				},
+				"docName": {
+					"type": "keyword",
+					"index": true
+				},
+				"lineTxt": {
+					"type": "keyword",
+					"index": true
+				},
+				"lineIdx": {
+					"type": "long"
+				},
+				"cmdId": {
+					"type": "long"
+				}
+			}
+		}
+	}
+}'

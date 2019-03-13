@@ -1,21 +1,15 @@
 package com.quindel.exe1.qexe.model;
 
-public class Params {
+import com.quindel.exe1.qexe.database.DBConstants;
 
+public class ChangeDocParams {
+
+	private Long timeStamp = null;
 	private String docName = "";
 	private String lineTxt = "";
 	private int lineIdx = 0;
-	
-	private int line = 0;
-	
-	public int getLine() {
-		return line;
-	}
-	
-	public void setLine(int line) {
-		this.line = line;
-	}
-	
+	private int cmdId = DBConstants.CHANGES_TYPES.NO_CHG.getId();
+		
 	public String getDocName() {
 		return docName;
 	}
@@ -38,5 +32,21 @@ public class Params {
 
 	public void setLineIdx(int lineIdx) {
 		this.lineIdx = lineIdx;
+	}
+
+	public Long getTimeStamp() {
+		return timeStamp;
+	}
+
+	public void setTimeStamp(Long timeStamp) {
+		this.timeStamp = timeStamp;
+	}
+
+	public int getCmdId() {
+		return cmdId;
+	}
+
+	public void setCmdId(int cmdId) {
+		this.cmdId = cmdId;
 	}
 }
