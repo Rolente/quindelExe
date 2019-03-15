@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>com.quindel.exe1</groupId>
 	<artifactId>qexe</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.1.0</version>
 	<name>qexe</name>
 	<description>Demo project for Spring Boot</description>
 
@@ -54,6 +54,7 @@
 	</dependencies>
 
 	<build>
+		<finalName>QINDEL_EXE</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
