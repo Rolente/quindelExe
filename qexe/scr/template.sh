@@ -3,10 +3,10 @@
 HOST=localhost
 PORT=9200
 
-curl -XDELETE http://${HOST}:${PORT}/_template/qindel_document >/dev/null 2>&1
-curl -XPUT http://${HOST}:${PORT}/_template/qindel_document -H 'Content-Type: application/json' -d '
+curl -XDELETE http://${HOST}:${PORT}/_template/doc_line_idx >/dev/null 2>&1
+curl -XPUT http://${HOST}:${PORT}/_template/doc_line_idx -H 'Content-Type: application/json' -d '
 {
-	"index_patterns": "qindel_document*", 
+	"index_patterns": "doc_line_idx*", 
 	"order": 1,
  
 	"settings": {
@@ -27,22 +27,31 @@ curl -XPUT http://${HOST}:${PORT}/_template/qindel_document -H 'Content-Type: ap
 
 	"mappings": {
 
-		"qindel_doc": {
+		"doc_line_type": {
 			"properties": {
-				"lines": {
+				"docName": {
+					"type": "keyword",
+					"index": true
+				},
+				"text": {
  					"type": "text", 
 					 "index": true,
 					 "analyzer": "es_std"
+				},
+				"lineIdx": {
+					"type": "long"
 				}
 			}
 		}
 	}
 }'
 
-curl -XDELETE http://${HOST}:${PORT}/_template/qindel_changes >/dev/null 2>&1
-curl -XPUT http://${HOST}:${PORT}/_template/qindel_changes -H 'Content-Type: application/json' -d '
+curl -XPUT http://${HOST}:${PORT}/doc_line_idx
+
+curl -XDELETE http://${HOST}:${PORT}/_template/doc_changes_idx >/dev/null 2>&1
+curl -XPUT http://${HOST}:${PORT}/_template/doc_changes_idx -H 'Content-Type: application/json' -d '
 {
-	"index_patterns": "qindel_changes*", 
+	"index_patterns": "doc_changes_idx*", 
 	"order": 1,
  
 	"settings": {
@@ -55,7 +64,7 @@ curl -XPUT http://${HOST}:${PORT}/_template/qindel_changes -H 'Content-Type: app
 
 	"mappings": {
 
-		"qindel_changes": {
+		"doc_changes_type": {
 			"properties": {
 				"timeStamp": {
 					"type": "date",
@@ -79,3 +88,5 @@ curl -XPUT http://${HOST}:${PORT}/_template/qindel_changes -H 'Content-Type: app
 		}
 	}
 }'
+
+curl -XPUT http://${HOST}:${PORT}/doc_changes_idx

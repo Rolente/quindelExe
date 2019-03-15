@@ -2,21 +2,18 @@ package com.quindel.exe1.qexe.database;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 
 import javax.annotation.PreDestroy;
 
 import org.apache.http.HttpHost;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.delete.DeleteResponse;
-import org.elasticsearch.action.get.GetRequest;
-import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.support.WriteRequest.RefreshPolicy;
 import org.elasticsearch.action.support.replication.ReplicationResponse;
 import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
@@ -30,17 +27,17 @@ import org.elasticsearch.search.sort.SortOrder;
 
 import com.quindel.exe1.qexe.model.ChangeDocCommand;
 import com.quindel.exe1.qexe.model.ChangeDocParams;
-import com.quindel.exe1.qexe.model.Document;
+import com.quindel.exe1.qexe.model.DbDocumentLine;
 
 public class ElasticClient {
 	
 	private static ElasticClient elasticClient = null;
 	
-	static final String INDEX = "qindel_document";
-	static final String CHG_INDEX = "qindel_changes";	
+	static final String INDEX = "doc_line_idx";
+	static final String CHG_INDEX = "doc_changes_idx";	
 	
-	static final String TYPE = "qindel_doc";
-	static final String CHG_TYPE = "qindel_changes";
+	static final String TYPE = "doc_line_type";
+	static final String CHG_TYPE = "doc_changes_type";
 
 	RestHighLevelClient client = null;
 	
@@ -59,6 +56,344 @@ public class ElasticClient {
 			elasticClient = new ElasticClient();
 		
 		return elasticClient;
+	}
+		
+	/***
+	 * Retorna el número de lineas que tienes un documento.
+	 * @param docName
+	 * @return
+	 */
+	public long getDocumentLinesCount(String docName) {
+		
+		long linesCount = 0;
+		
+		SearchRequest searchRequest = new SearchRequest();
+		searchRequest.indices(INDEX);
+		
+		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
+		sourceBuilder.query(QueryBuilders.termQuery("docName", docName));
+		sourceBuilder.size(0);
+		
+		searchRequest.source(sourceBuilder);
+		
+		try {
+			SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+			
+			if(response.getFailedShards() == 0) 
+				linesCount = response.getHits().totalHits;
+			
+		} catch (IOException e) {
+			
+			linesCount = -1;
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return linesCount;
+	}
+	
+	/**
+	 * Se inserta una linea el el documento.
+	 * @param docLine
+	 * @return
+	 */
+	public boolean insertDocumentLine(DbDocumentLine docLine) {
+		boolean ok = true;
+		long totalLines = getDocumentLinesCount(docLine.getDocName());
+		long lineInsert = docLine.getLineIdx();
+		
+		// Se actualizan los números de linea de las posteriores lineas.
+		if(lineInsert <= totalLines) {
+			
+			long actualLineIdx = totalLines;
+			
+			while(lineInsert <= actualLineIdx) {
+
+				DbDocumentLine lineToUpdate = getDbDocumentLine(docLine.getDocName(), actualLineIdx);
+								
+				String lineToUpdateId = getDocumentLineId(lineToUpdate.getDocName(), lineToUpdate.getLineIdx());
+						
+				lineToUpdate.setLineIdx(lineToUpdate.getLineIdx() + 1);
+				
+				ok = updateDocumentLine(lineToUpdate, lineToUpdateId);
+				
+				if(!ok)
+					break;
+			
+				actualLineIdx--;
+			}
+		}
+		
+		if(ok) {
+			ok = false;
+			
+			IndexRequest request = new IndexRequest(INDEX, TYPE);	
+			
+			DbDocumentLine dbDocumentLine = new DbDocumentLine(docLine.getDocName(), docLine.getLineIdx(), docLine.getText());
+			
+			request.source(DBConstants.GSON.toJson(dbDocumentLine), XContentType.JSON);
+			request.setRefreshPolicy(RefreshPolicy.IMMEDIATE);
+			
+			try {
+				IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+				
+				ReplicationResponse.ShardInfo shardInfo = response.getShardInfo();
+				
+				if(shardInfo.getFailed() == 0) {
+					ok = true;
+				}
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}		
+		}
+		
+		return ok;
+	}
+	
+	/***
+	 * Retorna una linea de un documento.
+	 * @param docName
+	 * @param line
+	 * @return
+	 */
+	public DbDocumentLine getDbDocumentLine(String docName, long line) {
+		DbDocumentLine dbDocLine = null;
+		
+		SearchRequest searchRequest = new SearchRequest();
+		searchRequest.indices(INDEX);
+		
+		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
+		
+		sourceBuilder.query(
+			QueryBuilders.boolQuery()
+				.filter(QueryBuilders.termQuery("docName", docName))
+				.filter(QueryBuilders.termQuery("lineIdx", line))
+		);
+		
+		searchRequest.source(sourceBuilder);
+		
+		try {
+			SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+			
+			if(response.getFailedShards() == 0) {
+				
+				SearchHits hits = response.getHits();
+				
+				SearchHit[] searchHits = hits.getHits();	
+
+				if(searchHits.length == 1) {
+					dbDocLine = DBConstants.GSON.fromJson(searchHits[0].getSourceAsString(), DbDocumentLine.class);
+				}
+			}
+			
+		} catch (IOException e) {
+			
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return dbDocLine;
+	}
+	
+	/***
+	 * Retorna todas las lineas de un documento.
+	 * @param docName
+	 * @param line
+	 * @return
+	 */
+	public List<DbDocumentLine> getDbDocumentLines(String docName) {
+		List<DbDocumentLine> dbDocLines = null;
+		
+		SearchRequest searchRequest = new SearchRequest();
+		searchRequest.indices(INDEX);
+		
+		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
+		sourceBuilder.query(QueryBuilders.termQuery("docName", docName));
+		sourceBuilder.sort("lineIdx", SortOrder.ASC);
+		
+		searchRequest.source(sourceBuilder);
+		
+		try {
+			SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+			
+			if(response.getFailedShards() == 0) {
+				
+				dbDocLines = new ArrayList<DbDocumentLine>();
+				
+				SearchHits hits = response.getHits();
+				
+				SearchHit[] searchHits = hits.getHits();	
+
+				for(SearchHit hit: searchHits) {
+					dbDocLines.add(DBConstants.GSON.fromJson(hit.getSourceAsString(), DbDocumentLine.class));
+				}
+			}
+			
+		} catch (IOException e) {
+			
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return dbDocLines;
+	}
+	
+	private String getDocumentLineId(String docName, long line) {
+		String id = "";
+		
+		SearchRequest searchRequest = new SearchRequest();
+		searchRequest.indices(INDEX);
+		
+		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
+		sourceBuilder.query(QueryBuilders.boolQuery()
+								.filter(QueryBuilders.termQuery("docName", docName))
+								.filter(QueryBuilders.termQuery("lineIdx", line)));
+		
+		searchRequest.source(sourceBuilder);
+		
+		try {
+			SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+			
+			if(response.getFailedShards() == 0) {
+				
+				SearchHits hits = response.getHits();
+				
+				SearchHit[] searchHits = hits.getHits();	
+
+				if(searchHits.length == 1) {
+					id = searchHits[0].getId();
+				}
+			}
+			
+		} catch (IOException e) {
+			
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return id;
+	}
+	
+	/***
+	 * Actualiza el texto de una linea de un documento
+	 * @param docName
+	 * @param line
+	 * @param newText
+	 */
+	public boolean updateDocumentLine(DbDocumentLine docLine) {
+		
+		boolean ret = false;
+		
+		String documentLineId = getDocumentLineId(docLine.getDocName(), docLine.getLineIdx());
+		
+		if(documentLineId.compareTo("") != 0) {
+		
+			IndexRequest request = new IndexRequest(INDEX, TYPE, documentLineId);	
+			
+			request.source(DBConstants.GSON.toJson(docLine), XContentType.JSON);
+			request.setRefreshPolicy(RefreshPolicy.IMMEDIATE);
+			
+			try {
+				IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+				
+				ReplicationResponse.ShardInfo shardInfo = response.getShardInfo();
+				
+				if(shardInfo.getFailed() == 0) {
+					ret = true;
+				}
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		return ret;
+	}
+	
+	/***
+	 * Actualiza el texto de una linea de un documento de un id concreto
+	 * @param docName
+	 * @param line
+	 * @param newText
+	 */
+	public boolean updateDocumentLine(DbDocumentLine docLine, String documentLineId) {
+		
+		boolean ret = false;
+		
+		if(documentLineId.compareTo("") != 0) {
+		
+			IndexRequest request = new IndexRequest(INDEX, TYPE, documentLineId);	
+			
+			request.source(DBConstants.GSON.toJson(docLine), XContentType.JSON);
+			request.setRefreshPolicy(RefreshPolicy.IMMEDIATE);
+			
+			try {
+				IndexResponse response = client.index(request, RequestOptions.DEFAULT);
+				
+				ReplicationResponse.ShardInfo shardInfo = response.getShardInfo();
+				
+				if(shardInfo.getFailed() == 0) {
+					ret = true;
+				}
+				
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		
+		return ret;
+	}
+	
+	/**
+	 * Elimina una linea del documento.
+	 * @param docLine
+	 * @return
+	 */
+	public boolean eraseDocumentLine(DbDocumentLine docLine) {
+		boolean ret = false;
+		
+		long totalLines = getDocumentLinesCount(docLine.getDocName());
+		long lineDel = docLine.getLineIdx();
+		
+		String documentLineId = getDocumentLineId(docLine.getDocName(), lineDel);
+		
+		DeleteRequest request = new DeleteRequest(INDEX, TYPE, documentLineId);
+		request.setRefreshPolicy(RefreshPolicy.IMMEDIATE);
+		
+		try {
+			DeleteResponse response = client.delete(request, RequestOptions.DEFAULT);
+			
+			if(response.getShardInfo().getFailed() == 0) {
+				ret = true;
+			}
+			
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
+		// Se actualiza el número de línea de las restantes lineas del documento.
+		if(ret && lineDel < totalLines) {
+			
+			long actualLineIdx = lineDel;
+			
+			while(actualLineIdx < totalLines) {
+
+				DbDocumentLine lineToUpdate = getDbDocumentLine(docLine.getDocName(), ++actualLineIdx);
+								
+				String lineToUpdateId = getDocumentLineId(lineToUpdate.getDocName(), lineToUpdate.getLineIdx());
+						
+				lineToUpdate.setLineIdx(lineToUpdate.getLineIdx() - 1);
+				
+				updateDocumentLine(lineToUpdate, lineToUpdateId);				
+			}
+		}
+		
+		return ret;
 	}
 	
 	public boolean persisteDocChange(String changeCmdStr) {
@@ -85,26 +420,6 @@ public class ElasticClient {
 		}		
 		
 		return ret;
-	}
-	
-	public void persistDocument(Document document) {
-		IndexRequest request = new IndexRequest(INDEX, TYPE, document.getDocName());	
-		
-		request.source(document.linesToJson(), XContentType.JSON);
-		
-		try {
-			IndexResponse response = client.index(request, RequestOptions.DEFAULT);
-			
-			ReplicationResponse.ShardInfo shardInfo = response.getShardInfo();
-			
-			if(shardInfo.getFailed() > 0) {
-				System.out.println("Fallo al indexar la linea");
-			}
-			
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}		
 	}
 	
 	public List<ChangeDocCommand> retrieveDocumentChangesCommands(String docName) {
@@ -149,6 +464,7 @@ public class ElasticClient {
 		boolean ret = false;
 		
 		DeleteRequest request = new DeleteRequest(CHG_INDEX, CHG_TYPE, docId);
+		request.setRefreshPolicy(RefreshPolicy.IMMEDIATE);
 		
 		try {
 			DeleteResponse response = client.delete(request, RequestOptions.DEFAULT);
@@ -164,50 +480,7 @@ public class ElasticClient {
 		
 		return ret;
 	}
-	
-	/**
-	 * Recupera un documento de la base de datos.
-	 * @param docName
-	 * @return
-	 */
-	@SuppressWarnings("unchecked")
-	public Document retrieveDocument(String docName) {
 		
-		Document doc = null;
-		
-		GetRequest request = new GetRequest(
-				INDEX,
-				TYPE,
-				docName
-				);
-		
-		try {
-			
-			if(client.exists(request, RequestOptions.DEFAULT)) {
-				GetResponse response = client.get(request, RequestOptions.DEFAULT);
-				
-				if(response.isExists()) {
-					doc = new Document();
-					
-					Map<String, Object> source = response.getSourceAsMap();
-					
-					doc.setDocName(docName);
-					
-					Object obj = source.get("lines");
-					
-					if(obj != null) {
-						doc.setAllLines(new ArrayList<String>((Collection<String>)obj));
-					}
-				}
-			}
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		return doc;
-	}
-	
 	@PreDestroy
 	public void stop() {
 		try {

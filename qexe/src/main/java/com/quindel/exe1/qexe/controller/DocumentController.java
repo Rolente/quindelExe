@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.quindel.exe1.qexe.model.Document;
 import com.quindel.exe1.qexe.model.ChangeDocParams;
+import com.quindel.exe1.qexe.model.DbDocumentLine;
 import com.quindel.exe1.qexe.service.DocumentService;
 @RestController
 public class DocumentController {
@@ -19,13 +20,63 @@ public class DocumentController {
 	
 	@GetMapping("/getDocument")
 	public Document getDocument(@RequestBody ChangeDocParams command) {
-		return docService.getDocument(command.getDocName());
+		
+		Document doc = docService.getDocument(command.getDocName());
+		
+		if(doc != null)
+			return doc;
+		else
+			return new Document();
 	}
 	
 	@PostMapping("/addLine")
 	public Document addLine(@RequestBody ChangeDocParams command) {
-		docService.addLineToDocument(command);
-		return docService.getDocument(command.getDocName());
+		
+		if(docService.addLineToDocument(command)) {
+			Document doc = docService.getDocument(command.getDocName());
+			
+			if(doc != null)
+				return doc;
+		}
+		
+		return new Document();
+	}
+	
+	@PutMapping("/insertLine")
+	public Document insertLine(@RequestBody ChangeDocParams command) {
+		
+		if(docService.insertLineInDocument(command)) {
+			Document doc = docService.getDocument(command.getDocName());
+			
+			if(doc != null)
+				return doc;
+		}
+		
+		return new Document();
+	}
+
+	@PutMapping("/eraseLine")
+	public Document eraseLine(@RequestBody ChangeDocParams command) {
+		if(docService.eraseDocumentLine(command)) {
+			Document doc = docService.getDocument(command.getDocName());
+			
+			if(doc != null)
+				return doc;
+		}
+		
+		return new Document();
+	}
+	
+	@PutMapping("/modifyLine")
+	public Document modifyLine(@RequestBody ChangeDocParams command) {
+		if(docService.modifyDocumentLine(command)) {
+			Document doc = docService.getDocument(command.getDocName());
+			
+			if(doc != null)
+				return doc;
+		}
+
+		return new Document();
 	}
 	
 	@PostMapping("/rollbackDocMod/{docName}")
@@ -37,32 +88,14 @@ public class DocumentController {
 	public Document seeDocPrevVersion(@PathVariable String docName, @PathVariable int numModifications) {
 		return docService.rollbaclModifications(docName, numModifications, false);
 	}
-	
-	@PutMapping("/insertLine")
-	public Document insertLine(@RequestBody ChangeDocParams command) {
-		docService.insertLineInDocument(command);
-		return docService.getDocument(command.getDocName());
-	}
-
-	@PutMapping("/eraseLine")
-	public Document eraseLine(@RequestBody ChangeDocParams command) {
-		docService.eraseDocumentLine(command);
-		return docService.getDocument(command.getDocName());
-	}
-	
-	@PutMapping("/modifyLine")
-	public Document modifyLine(@RequestBody ChangeDocParams command) {
-		docService.modifyDocumentLine(command);
-		return docService.getDocument(command.getDocName());
-	}
-	
+		
 	@GetMapping("/getLine")
-	public String getLine(@RequestBody ChangeDocParams command) {
+	public DbDocumentLine getLine(@RequestBody ChangeDocParams command) {
 		return docService.getLine(command);		
 	}
 	
 	@GetMapping("/getNumLines")
-	public int getNumLines(@RequestBody ChangeDocParams command) {
+	public long getNumLines(@RequestBody ChangeDocParams command) {
 		return docService.getNumLines(command);	
 	}
 }

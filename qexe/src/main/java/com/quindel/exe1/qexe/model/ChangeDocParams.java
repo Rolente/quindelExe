@@ -7,7 +7,7 @@ public class ChangeDocParams {
 	private Long timeStamp = null;
 	private String docName = "";
 	private String lineTxt = "";
-	private int lineIdx = 0;
+	private long lineIdx = 0;
 	private int cmdId = DBConstants.CHANGES_TYPES.NO_CHG.getId();
 		
 	public String getDocName() {
@@ -26,11 +26,11 @@ public class ChangeDocParams {
 		this.lineTxt = lineTxt;
 	}
 
-	public int getLineIdx() {
+	public long getLineIdx() {
 		return lineIdx;
 	}
 
-	public void setLineIdx(int lineIdx) {
+	public void setLineIdx(long lineIdx) {
 		this.lineIdx = lineIdx;
 	}
 
