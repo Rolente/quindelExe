@@ -3,6 +3,7 @@ package com.quindel.exe1.qexe.database;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 
 import javax.annotation.PreDestroy;
 
@@ -19,6 +20,7 @@ import org.elasticsearch.client.RequestOptions;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.index.query.MatchPhraseQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
@@ -56,6 +58,65 @@ public class ElasticClient {
 			elasticClient = new ElasticClient();
 		
 		return elasticClient;
+	}
+	
+	/***
+	 * Realiza una búsqueda en uno o mas documentos una o mas palabras.
+	 * @param docNames
+	 * @param words
+	 * @return
+	 */
+	public List<DbDocumentLine> searchWords(List<String> docNames, List<String> words){
+		
+		List<DbDocumentLine> lines = new ArrayList<>();
+		
+		SearchRequest searchRequest = new SearchRequest();
+		searchRequest.indices(INDEX);
+		
+		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
+				
+		if(docNames.size() == 0) {
+			sourceBuilder.query(
+					QueryBuilders
+					 .boolQuery()
+						.must(QueryBuilders.termsQuery("text", words))
+				).size(DBConstants.MAX_DOC_LINES);
+		}
+		else {
+			sourceBuilder.query(
+					QueryBuilders
+					 .boolQuery()
+						.must(QueryBuilders.termsQuery("text", words))
+						.must(QueryBuilders.termsQuery("docName", docNames))
+					
+				).size(DBConstants.MAX_DOC_LINES);
+		}
+		
+		searchRequest.source(sourceBuilder);		
+		
+		try {
+			SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+			
+			if(response.getFailedShards() == 0) {
+				
+				lines = new ArrayList<DbDocumentLine>();
+				
+				SearchHits hits = response.getHits();
+				
+				SearchHit[] searchHits = hits.getHits();	
+
+				for(SearchHit hit: searchHits) {
+					lines.add(lines.size(), DBConstants.GSON.fromJson(hit.getSourceAsString(), DbDocumentLine.class));
+				}
+			}
+			
+		} catch (IOException e) {
+			
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return lines;
 	}
 		
 	/***
@@ -170,7 +231,7 @@ public class ElasticClient {
 			QueryBuilders.boolQuery()
 				.filter(QueryBuilders.termQuery("docName", docName))
 				.filter(QueryBuilders.termQuery("lineIdx", line))
-		);
+		).size(DBConstants.MAX_DOC_LINES);
 		
 		searchRequest.source(sourceBuilder);
 		
@@ -212,6 +273,7 @@ public class ElasticClient {
 		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
 		sourceBuilder.query(QueryBuilders.termQuery("docName", docName));
 		sourceBuilder.sort("lineIdx", SortOrder.ASC);
+		sourceBuilder.size(DBConstants.MAX_DOC_LINES);
 		
 		searchRequest.source(sourceBuilder);
 		
@@ -249,7 +311,7 @@ public class ElasticClient {
 		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
 		sourceBuilder.query(QueryBuilders.boolQuery()
 								.filter(QueryBuilders.termQuery("docName", docName))
-								.filter(QueryBuilders.termQuery("lineIdx", line)));
+								.filter(QueryBuilders.termQuery("lineIdx", line))).size(DBConstants.MAX_DOC_LINES);
 		
 		searchRequest.source(sourceBuilder);
 		
@@ -432,6 +494,7 @@ public class ElasticClient {
 		SearchSourceBuilder sourceBuilder = new SearchSourceBuilder(); 
 		sourceBuilder.query(QueryBuilders.termQuery("docName", docName));
 		sourceBuilder.sort("timeStamp", SortOrder.DESC);
+		sourceBuilder.size(DBConstants.MAX_DOC_LINES);
 		
 		searchRequest.source(sourceBuilder);
 		

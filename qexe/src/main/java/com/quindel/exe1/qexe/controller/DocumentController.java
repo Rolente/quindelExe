@@ -1,5 +1,8 @@
 package com.quindel.exe1.qexe.controller;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -9,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.quindel.exe1.qexe.model.Document;
+import com.quindel.exe1.qexe.model.SearchCommad;
 import com.quindel.exe1.qexe.model.ChangeDocParams;
 import com.quindel.exe1.qexe.model.DbDocumentLine;
 import com.quindel.exe1.qexe.service.DocumentService;
@@ -97,5 +101,10 @@ public class DocumentController {
 	@GetMapping("/getNumLines")
 	public long getNumLines(@RequestBody ChangeDocParams command) {
 		return docService.getNumLines(command);	
+	}
+	
+	@GetMapping("/search")
+	public List<DbDocumentLine> search(@RequestBody SearchCommad searchCommand){
+		return docService.search(searchCommand);
 	}
 }

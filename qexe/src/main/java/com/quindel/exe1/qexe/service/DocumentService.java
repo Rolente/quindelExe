@@ -9,6 +9,7 @@ import com.quindel.exe1.qexe.database.DBConstants;
 import com.quindel.exe1.qexe.database.ElasticClient;
 import com.quindel.exe1.qexe.database.DBConstants.CHANGES_TYPES;
 import com.quindel.exe1.qexe.model.Document;
+import com.quindel.exe1.qexe.model.SearchCommad;
 import com.quindel.exe1.qexe.model.ChangeDocCommand;
 import com.quindel.exe1.qexe.model.ChangeDocParams;
 import com.quindel.exe1.qexe.model.DbDocumentLine;
@@ -35,6 +36,10 @@ public class DocumentService {
 	
 	public long getNumLines(ChangeDocParams command) {		
 		return ElasticClient.getInstance().getDocumentLinesCount(command.getDocName());
+	}
+	
+	public List<DbDocumentLine> search(SearchCommad searchCommand){
+		return ElasticClient.getInstance().searchWords(searchCommand.getDocNames(), searchCommand.getWords());
 	}
 	
 	public synchronized Document rollbaclModifications(String docName)

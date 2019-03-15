@@ -29,5 +29,7 @@ public class DBConstants {
 		}
 	};
 	
+	public static final int MAX_DOC_LINES = 10000;
+	
 	public static final Gson GSON = new GsonBuilder().serializeSpecialFloatingPointValues().create();
 }
